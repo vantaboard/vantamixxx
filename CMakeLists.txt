@@ -3446,6 +3446,18 @@ if(FFMPEG)
   target_include_directories(mixxx-lib PUBLIC "${FFMPEG_INCLUDE_DIRS}")
 endif()
 
+# STEM file support
+default_option(STEM "STEM file support" "FFMPEG_FOUND;FFMPEG")
+if (STEM)
+  if(NOT FFMPEG)
+    message(FATAL_ERROR "FFMPEG was not enabled")
+  endif()
+  target_compile_definitions(mixxx-lib PUBLIC __STEM__)
+  target_sources(mixxx-lib PRIVATE
+    src/sources/soundsourcestem.cpp
+  )
+endif()
+
 # Google PerfTools
 option(GPERFTOOLS "Google PerfTools libtcmalloc linkage" OFF)
 option(GPERFTOOLSPROFILER "Google PerfTools libprofiler linkage" OFF)

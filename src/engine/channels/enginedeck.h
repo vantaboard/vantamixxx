@@ -2,9 +2,10 @@
 
 #include <QScopedPointer>
 
-#include "preferences/usersettings.h"
 #include "engine/channels/enginechannel.h"
+#include "preferences/usersettings.h"
 #include "soundio/soundmanagerutil.h"
+#include "util/samplebuffer.h"
 
 class EnginePregain;
 class EngineBuffer;
@@ -23,6 +24,7 @@ class EngineDeck : public EngineChannel, public AudioDestination {
             bool primaryDeck);
     ~EngineDeck() override;
 
+    void processStem(CSAMPLE* pOutput, const int iBufferSize);
     void process(CSAMPLE* pOutput, const int iBufferSize) override;
     void collectFeatures(GroupFeatureState* pGroupFeatures) const override;
 
@@ -73,6 +75,8 @@ class EngineDeck : public EngineChannel, public AudioDestination {
     UserSettingsPointer m_pConfig;
     EngineBuffer* m_pBuffer;
     EnginePregain* m_pPregain;
+
+    mixxx::SampleBuffer m_stemBuffer;
 
     // Begin vinyl passthrough fields
     QScopedPointer<ControlObject> m_pInputConfigured;

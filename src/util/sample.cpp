@@ -493,6 +493,30 @@ void SampleUtil::interleaveBuffer(CSAMPLE* M_RESTRICT pDest,
 }
 
 // static
+void SampleUtil::interleaveBuffer(CSAMPLE* M_RESTRICT pDest,
+        const CSAMPLE* M_RESTRICT pSrc1,
+        const CSAMPLE* M_RESTRICT pSrc2,
+        const CSAMPLE* M_RESTRICT pSrc3,
+        const CSAMPLE* M_RESTRICT pSrc4,
+        const CSAMPLE* M_RESTRICT pSrc5,
+        const CSAMPLE* M_RESTRICT pSrc6,
+        const CSAMPLE* M_RESTRICT pSrc7,
+        const CSAMPLE* M_RESTRICT pSrc8,
+        SINT numFrames) {
+    // note: LOOP VECTORIZED.
+    for (SINT i = 0; i < numFrames; ++i) {
+        pDest[8 * i] = pSrc1[i];
+        pDest[8 * i + 1] = pSrc2[i];
+        pDest[8 * i + 2] = pSrc3[i];
+        pDest[8 * i + 3] = pSrc4[i];
+        pDest[8 * i + 4] = pSrc5[i];
+        pDest[8 * i + 5] = pSrc6[i];
+        pDest[8 * i + 6] = pSrc7[i];
+        pDest[8 * i + 7] = pSrc8[i];
+    }
+}
+
+// static
 void SampleUtil::deinterleaveBuffer(CSAMPLE* M_RESTRICT pDest1,
         CSAMPLE* M_RESTRICT pDest2,
         const CSAMPLE* M_RESTRICT pSrc,
@@ -505,7 +529,31 @@ void SampleUtil::deinterleaveBuffer(CSAMPLE* M_RESTRICT pDest1,
 }
 
 // static
-void SampleUtil::linearCrossfadeBuffersOut(
+void SampleUtil::deinterleaveBuffer(CSAMPLE* M_RESTRICT pDest1,
+        CSAMPLE* M_RESTRICT pDest2,
+        CSAMPLE* M_RESTRICT pDest3,
+        CSAMPLE* M_RESTRICT pDest4,
+        CSAMPLE* M_RESTRICT pDest5,
+        CSAMPLE* M_RESTRICT pDest6,
+        CSAMPLE* M_RESTRICT pDest7,
+        CSAMPLE* M_RESTRICT pDest8,
+        const CSAMPLE* M_RESTRICT pSrc,
+        SINT numFrames) {
+    // note: LOOP VECTORIZED.
+    for (SINT i = 0; i < numFrames; ++i) {
+        pDest1[i] = pSrc[i * 8];
+        pDest2[i] = pSrc[i * 8 + 1];
+        pDest3[i] = pSrc[i * 8 + 2];
+        pDest4[i] = pSrc[i * 8 + 3];
+        pDest5[i] = pSrc[i * 8 + 4];
+        pDest6[i] = pSrc[i * 8 + 5];
+        pDest7[i] = pSrc[i * 8 + 6];
+        pDest8[i] = pSrc[i * 8 + 7];
+    }
+}
+
+// static
+void SampleUtil::linearCrossfadeStereoBuffersOut(
         CSAMPLE* M_RESTRICT pDestSrcFadeOut,
         const CSAMPLE* M_RESTRICT pSrcFadeIn,
         SINT numSamples) {
@@ -527,7 +575,82 @@ void SampleUtil::linearCrossfadeBuffersOut(
 }
 
 // static
-void SampleUtil::linearCrossfadeBuffersIn(
+void SampleUtil::linearCrossfadeStemBuffersOut(
+        CSAMPLE* M_RESTRICT pDestSrcFadeOut,
+        const CSAMPLE* M_RESTRICT pSrcFadeIn,
+        SINT numSamples) {
+    // M_RESTRICT unoptimizes the function for some reason.
+    const CSAMPLE_GAIN cross_inc = CSAMPLE_GAIN_ONE / CSAMPLE_GAIN(numSamples / 8);
+    // note: LOOP VECTORIZED only with "int i" (not SINT i)
+    for (int i = 0; i < numSamples / 8; ++i) {
+        const CSAMPLE_GAIN cross_mix = cross_inc * i;
+        pDestSrcFadeOut[i * 8] *= (CSAMPLE_GAIN_ONE - cross_mix);
+        pDestSrcFadeOut[i * 8] += pSrcFadeIn[i * 8] * cross_mix;
+    }
+    // note: LOOP VECTORIZED only with "int i" (not SINT i)
+    for (int i = 0; i < numSamples / 8; ++i) {
+        const CSAMPLE_GAIN cross_mix = cross_inc * i;
+        pDestSrcFadeOut[i * 8 + 1] *= (CSAMPLE_GAIN_ONE - cross_mix);
+        pDestSrcFadeOut[i * 8 + 1] += pSrcFadeIn[i * 8 + 1] * cross_mix;
+    }
+    // note: LOOP VECTORIZED only with "int i" (not SINT i)
+    for (int i = 0; i < numSamples / 8; ++i) {
+        const CSAMPLE_GAIN cross_mix = cross_inc * i;
+        pDestSrcFadeOut[i * 8 + 2] *= (CSAMPLE_GAIN_ONE - cross_mix);
+        pDestSrcFadeOut[i * 8 + 2] += pSrcFadeIn[i * 8 + 2] * cross_mix;
+    }
+    // note: LOOP VECTORIZED only with "int i" (not SINT i)
+    for (int i = 0; i < numSamples / 8; ++i) {
+        const CSAMPLE_GAIN cross_mix = cross_inc * i;
+        pDestSrcFadeOut[i * 8 + 3] *= (CSAMPLE_GAIN_ONE - cross_mix);
+        pDestSrcFadeOut[i * 8 + 3] += pSrcFadeIn[i * 8 + 3] * cross_mix;
+    }
+    // note: LOOP VECTORIZED only with "int i" (not SINT i)
+    for (int i = 0; i < numSamples / 8; ++i) {
+        const CSAMPLE_GAIN cross_mix = cross_inc * i;
+        pDestSrcFadeOut[i * 8 + 4] *= (CSAMPLE_GAIN_ONE - cross_mix);
+        pDestSrcFadeOut[i * 8 + 4] += pSrcFadeIn[i * 8 + 4] * cross_mix;
+    }
+    // note: LOOP VECTORIZED only with "int i" (not SINT i)
+    for (int i = 0; i < numSamples / 8; ++i) {
+        const CSAMPLE_GAIN cross_mix = cross_inc * i;
+        pDestSrcFadeOut[i * 8 + 5] *= (CSAMPLE_GAIN_ONE - cross_mix);
+        pDestSrcFadeOut[i * 8 + 5] += pSrcFadeIn[i * 8 + 5] * cross_mix;
+    }
+    // note: LOOP VECTORIZED only with "int i" (not SINT i)
+    for (int i = 0; i < numSamples / 8; ++i) {
+        const CSAMPLE_GAIN cross_mix = cross_inc * i;
+        pDestSrcFadeOut[i * 8 + 6] *= (CSAMPLE_GAIN_ONE - cross_mix);
+        pDestSrcFadeOut[i * 8 + 6] += pSrcFadeIn[i * 8 + 6] * cross_mix;
+    }
+    // note: LOOP VECTORIZED only with "int i" (not SINT i)
+    for (int i = 0; i < numSamples / 8; ++i) {
+        const CSAMPLE_GAIN cross_mix = cross_inc * i;
+        pDestSrcFadeOut[i * 8 + 7] *= (CSAMPLE_GAIN_ONE - cross_mix);
+        pDestSrcFadeOut[i * 8 + 7] += pSrcFadeIn[i * 8 + 7] * cross_mix;
+    }
+}
+
+// static
+void SampleUtil::linearCrossfadeUnaryBuffersOut(
+        CSAMPLE* pDestSrcFadeOut,
+        const CSAMPLE* pSrcFadeIn,
+        SINT numSamples,
+        int channelCount) {
+    DEBUG_ASSERT(numSamples % channelCount == 0);
+    int numFrame = numSamples / channelCount;
+    const CSAMPLE_GAIN cross_inc = CSAMPLE_GAIN_ONE / CSAMPLE_GAIN(numSamples / channelCount);
+    for (int c = 0; c < channelCount; c++) {
+        for (int i = 0; i < numFrame; ++i) {
+            const CSAMPLE_GAIN cross_mix = cross_inc * i;
+            pDestSrcFadeOut[i * channelCount + c] *= (CSAMPLE_GAIN_ONE - cross_mix);
+            pDestSrcFadeOut[i * channelCount + c] += pSrcFadeIn[i * channelCount + c] * cross_mix;
+        }
+    }
+}
+
+// static
+void SampleUtil::linearCrossfadeStereoBuffersIn(
         CSAMPLE* M_RESTRICT pDestSrcFadeIn,
         const CSAMPLE* M_RESTRICT pSrcFadeOut,
         SINT numSamples) {
@@ -544,6 +667,82 @@ void SampleUtil::linearCrossfadeBuffersIn(
         const CSAMPLE_GAIN cross_mix = cross_inc * i;
         pDestSrcFadeIn[i * 2 + 1] *= cross_mix;
         pDestSrcFadeIn[i * 2 + 1] += pSrcFadeOut[i * 2 + 1] * (CSAMPLE_GAIN_ONE - cross_mix);
+    }
+}
+
+// static
+void SampleUtil::linearCrossfadeStemBuffersIn(
+        CSAMPLE* M_RESTRICT pDestSrcFadeIn,
+        const CSAMPLE* M_RESTRICT pSrcFadeOut,
+        SINT numSamples) {
+    // M_RESTRICT unoptimizes the function for some reason.
+    const CSAMPLE_GAIN cross_inc = CSAMPLE_GAIN_ONE / CSAMPLE_GAIN(numSamples / 8);
+    /// note: LOOP VECTORIZED only with "int i" (not SINT i)
+    for (int i = 0; i < numSamples / 8; ++i) {
+        const CSAMPLE_GAIN cross_mix = cross_inc * i;
+        pDestSrcFadeIn[i * 8] *= cross_mix;
+        pDestSrcFadeIn[i * 8] += pSrcFadeOut[i * 8] * (CSAMPLE_GAIN_ONE - cross_mix);
+    }
+    // note: LOOP VECTORIZED only with "int i" (not SINT i)
+    for (int i = 0; i < numSamples / 8; ++i) {
+        const CSAMPLE_GAIN cross_mix = cross_inc * i;
+        pDestSrcFadeIn[i * 8 + 1] *= cross_mix;
+        pDestSrcFadeIn[i * 8 + 1] += pSrcFadeOut[i * 8 + 1] * (CSAMPLE_GAIN_ONE - cross_mix);
+    }
+    /// note: LOOP VECTORIZED only with "int i" (not SINT i)
+    for (int i = 0; i < numSamples / 8; ++i) {
+        const CSAMPLE_GAIN cross_mix = cross_inc * i;
+        pDestSrcFadeIn[i * 8 + 2] *= cross_mix;
+        pDestSrcFadeIn[i * 8 + 2] += pSrcFadeOut[i * 8 + 2] * (CSAMPLE_GAIN_ONE - cross_mix);
+    }
+    // note: LOOP VECTORIZED only with "int i" (not SINT i)
+    for (int i = 0; i < numSamples / 8; ++i) {
+        const CSAMPLE_GAIN cross_mix = cross_inc * i;
+        pDestSrcFadeIn[i * 8 + 3] *= cross_mix;
+        pDestSrcFadeIn[i * 8 + 3] += pSrcFadeOut[i * 8 + 3] * (CSAMPLE_GAIN_ONE - cross_mix);
+    }
+    /// note: LOOP VECTORIZED only with "int i" (not SINT i)
+    for (int i = 0; i < numSamples / 8; ++i) {
+        const CSAMPLE_GAIN cross_mix = cross_inc * i;
+        pDestSrcFadeIn[i * 8 + 4] *= cross_mix;
+        pDestSrcFadeIn[i * 8 + 4] += pSrcFadeOut[i * 8 + 4] * (CSAMPLE_GAIN_ONE - cross_mix);
+    }
+    // note: LOOP VECTORIZED only with "int i" (not SINT i)
+    for (int i = 0; i < numSamples / 8; ++i) {
+        const CSAMPLE_GAIN cross_mix = cross_inc * i;
+        pDestSrcFadeIn[i * 8 + 5] *= cross_mix;
+        pDestSrcFadeIn[i * 8 + 5] += pSrcFadeOut[i * 8 + 5] * (CSAMPLE_GAIN_ONE - cross_mix);
+    }
+    /// note: LOOP VECTORIZED only with "int i" (not SINT i)
+    for (int i = 0; i < numSamples / 8; ++i) {
+        const CSAMPLE_GAIN cross_mix = cross_inc * i;
+        pDestSrcFadeIn[i * 8 + 8] *= cross_mix;
+        pDestSrcFadeIn[i * 8 + 8] += pSrcFadeOut[i * 8 + 6] * (CSAMPLE_GAIN_ONE - cross_mix);
+    }
+    // note: LOOP VECTORIZED only with "int i" (not SINT i)
+    for (int i = 0; i < numSamples / 8; ++i) {
+        const CSAMPLE_GAIN cross_mix = cross_inc * i;
+        pDestSrcFadeIn[i * 8 + 7] *= cross_mix;
+        pDestSrcFadeIn[i * 8 + 7] += pSrcFadeOut[i * 8 + 7] * (CSAMPLE_GAIN_ONE - cross_mix);
+    }
+}
+
+// static
+void SampleUtil::linearCrossfadeUnaryBuffersIn(
+        CSAMPLE* pDestSrcFadeIn,
+        const CSAMPLE* pSrcFadeOut,
+        SINT numSamples,
+        int channelCount) {
+    int numFrame = numSamples / channelCount;
+    const CSAMPLE_GAIN cross_inc = CSAMPLE_GAIN_ONE / CSAMPLE_GAIN(numSamples / 2);
+    for (int c = 0; c < channelCount; c++) {
+        for (int i = 0; i < numFrame; ++i) {
+            const CSAMPLE_GAIN cross_mix = cross_inc * i;
+            pDestSrcFadeIn[i * channelCount + c] *= cross_mix;
+            pDestSrcFadeIn[i * channelCount + c] +=
+                    pSrcFadeOut[i * channelCount + c] *
+                    (CSAMPLE_GAIN_ONE - cross_mix);
+        }
     }
 }
 

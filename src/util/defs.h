@@ -18,7 +18,7 @@
 // see class SoundManagerConfig::AudioBufferSizeIndex
 // 96 kHz * 80 ms = 7680 -> 8192 (2^13)
 constexpr unsigned int kMaxEngineFrames = 8192;
-constexpr unsigned int kMaxEngineChannels = 2;
+constexpr unsigned int kMaxEngineChannels = 8;
 constexpr unsigned int kMaxEngineSamples = kMaxEngineChannels * kMaxEngineFrames;
 constexpr unsigned int MAX_BUFFER_LEN = 160000;
 

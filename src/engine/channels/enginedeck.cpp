@@ -44,6 +44,34 @@ EngineDeck::~EngineDeck() {
     delete m_pPregain;
 }
 
+void EngineDeck::processStem(CSAMPLE* pOut, const int iBufferSize) {
+    int stereoChannelCount = m_pBuffer->getChannelCount() / mixxx::kEngineChannelCount;
+    auto allChannelBufferSize = iBufferSize * stereoChannelCount;
+    if (m_stemBuffer.size() < allChannelBufferSize) {
+        m_stemBuffer = mixxx::SampleBuffer(allChannelBufferSize);
+    }
+    m_pBuffer->process(m_stemBuffer.data(), allChannelBufferSize);
+
+    // TODO(XXX): process effects per stems
+
+    for (int i = 0; i < iBufferSize / 2; i++) {
+        for (int c = 0; c < stereoChannelCount; c++) {
+            // TODO(XXX): apply stem gain or skip muted stem
+            if (!c) {
+                pOut[2 * i] = m_stemBuffer.data()[2 * stereoChannelCount * i];
+                pOut[2 * i + 1] = m_stemBuffer.data()[2 * stereoChannelCount * i + 1];
+            } else {
+                pOut[2 * i] += m_stemBuffer.data()[2 * stereoChannelCount * i + 2 * c];
+                pOut[2 * i + 1] +=
+                        m_stemBuffer
+                                .data()[2 * stereoChannelCount * i +
+                                        2 * c + 1];
+            }
+        }
+    }
+    // TODO(XXX): process stem DSP
+}
+
 void EngineDeck::process(CSAMPLE* pOut, const int iBufferSize) {
     // Feed the incoming audio through if passthrough is active
     const CSAMPLE* sampleBuffer = m_sampleBuffer; // save pointer on stack
@@ -61,7 +89,13 @@ void EngineDeck::process(CSAMPLE* pOut, const int iBufferSize) {
         }
 
         // Process the raw audio
-        m_pBuffer->process(pOut, iBufferSize);
+        if (m_pBuffer->getChannelCount() == mixxx::kEngineChannelCount) {
+            // Process a single stereo channel
+            m_pBuffer->process(pOut, iBufferSize);
+        } else {
+            // Process multiple stereo channels (stems) and mix them together
+            processStem(pOut, iBufferSize);
+        }
         m_pPregain->setSpeedAndScratching(m_pBuffer->getSpeed(), m_pBuffer->getScratching());
         m_bPassthroughWasActive = false;
     }

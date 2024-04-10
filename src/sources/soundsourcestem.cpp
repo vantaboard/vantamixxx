@@ -1,9 +1,4 @@
 #include "sources/soundsourcestem.h"
-
-#include <QJsonArray>
-#include <QJsonDocument>
-#include <QString>
-
 #include "sources/readaheadframebuffer.h"
 
 extern "C" {
@@ -23,10 +18,6 @@ extern "C" {
 #define VERBOSE_DEBUG_LOG false
 #endif
 
-#define ATOM_TYPE(value)                                                   \
-    (uint32_t)(((uint8_t)(value)[0] << 24) | ((uint8_t)(value)[1] << 16) | \
-            ((uint8_t)(value)[2] << 8) | (uint8_t)(value)[3])
-
 namespace mixxx {
 
 namespace {
@@ -34,46 +25,8 @@ namespace {
 // STEM constants
 constexpr int kNumStreams = 5;
 constexpr int kRequiredStreamCount = kNumStreams - 1; // Stem count doesn't include the main mix
-constexpr int kSupportedStemVersion = 1;
 
 const Logger kLogger("SoundSourceSTEM");
-
-const uint32_t kAtomHeaderSize = 8; // 4 bytes (unsigned integer) + 4 char
-const uint32_t kStemManifestAtomPath[] = {
-        ATOM_TYPE("moov"),
-        ATOM_TYPE("udta"),
-        ATOM_TYPE("stem"),
-        0 // This indicate end of the path
-};
-
-/// @brief Seek the reader the atom requested.
-/// @param reader The IODevice to search MP4 atom in
-/// @param path The list of atom to traverse in the tree, from top to bottom.
-/// Must be null terminated
-/// @param box_size The size of the box currently under the cursor to focus the
-/// search in
-/// @param pathIdx The level of the tree currently search (index of path)
-/// @return the size of the box data if found, -1 otherwise
-uint32_t seekTillAtom(QIODevice& reader,
-        const uint32_t path[],
-        uint32_t box_size = 0,
-        uint32_t pathIdx = 0) {
-    if (!path[pathIdx]) {
-        return box_size;
-    }
-
-    uint32_t byteRead = 0;
-    char buffer[kAtomHeaderSize];
-    while (!reader.atEnd() || (box_size && byteRead >= box_size)) {
-        reader.read(buffer, kAtomHeaderSize);
-        byteRead += box_size;
-        if (ATOM_TYPE(buffer + 4) == path[pathIdx]) {
-            return seekTillAtom(reader, path, ATOM_TYPE(buffer) - kAtomHeaderSize, pathIdx + 1);
-        }
-        reader.skip(ATOM_TYPE(buffer) - kAtomHeaderSize);
-    }
-    return -1;
-}
 
 } // anonymous namespace
 
@@ -338,39 +291,6 @@ SoundSource::OpenResult SoundSourceSTEM::tryOpen(
                 << getLocalFileName();
         return OpenResult::Failed;
     }
-    // Fetch the STEM manifest which contain stream details
-    auto file = QFile(getLocalFileName());
-    if (!file.open(QIODeviceBase::ReadOnly)) {
-        kLogger.warning()
-                << "Failed to open input file"
-                << getLocalFileName();
-        return OpenResult::Failed;
-    }
-
-    uint32_t manifestSize;
-    if (!(manifestSize = seekTillAtom(file, kStemManifestAtomPath))) {
-        kLogger.warning()
-                << "Failed to find the steam manifest in the file"
-                << getLocalFileName();
-        return OpenResult::Failed;
-    }
-
-    auto jsonData = QJsonDocument::fromJson(file.read(manifestSize));
-    VERIFY_OR_DEBUG_ASSERT(jsonData.isObject()) {
-        kLogger.warning()
-                << "Failed to extract the manifest data"
-                << getLocalFileName();
-        return OpenResult::Failed;
-    };
-    m_manifest = SoundSourceSTEM::Manifest::fromJson(jsonData.object());
-    VERIFY_OR_DEBUG_ASSERT(m_manifest.isValid()) {
-        kLogger.warning()
-                << "Failed to parse the manifest data"
-                << getLocalFileName();
-        return OpenResult::Failed;
-    };
-
-    file.close();
     // Open input
     AVFormatContext* pavInputFormatContext =
             SoundSourceFFmpeg::openInputFile(getLocalFileName());
@@ -545,47 +465,6 @@ ReadableSampleFrames SoundSourceSTEM::readSampleFramesClamped(
     }
 
     return read;
-}
-
-bool SoundSourceSTEM::Manifest::isValid() const {
-    return m_version == kSupportedStemVersion && m_streams.size() == kRequiredStreamCount;
-}
-
-// Static
-SoundSourceSTEM::Manifest SoundSourceSTEM::Manifest::fromJson(const QJsonObject& json) {
-    Manifest ret;
-    auto stems = json.value("stems");
-    if (!stems.isArray()) {
-        qDebug() << "Unexpected or missing stems value in STEM manifest";
-        return ret;
-    }
-    auto stemArray = stems.toArray();
-    ret.m_streams.reserve(stemArray.size());
-    for (const auto& stemRef : stemArray) {
-        if (!stemRef.isObject()) {
-            qDebug() << "Unexpected or missing stems value in STEM manifest";
-            return ret;
-        }
-        auto stem = stemRef.toObject();
-        auto color = QColor(stem.value("color").toString());
-        auto name = stem.value("name").toString();
-        if (!color.isValid() || name.isEmpty()) {
-            qDebug() << "Unexpected or missing stem name or attribute in STEM manifest";
-            return ret;
-        }
-        ret.m_streams.append(Manifest::Stream{
-                color,
-                name,
-        });
-    }
-
-    auto version = json.value("version").toInteger(-1);
-    if (version <= 0) {
-        qDebug() << "Unexpected or missing version value in STEM manifest";
-        return ret;
-    }
-    ret.m_version = version;
-    return ret;
 }
 
 } // namespace mixxx

@@ -884,13 +884,18 @@ void EngineBuffer::processTrackLocked(CSAMPLE* pOutput,
     // (1.0 being normal rate. 2.0 plays at 2x speed -- 2 track seconds
     // pass for every 1 real second). Depending on whether
     // keylock is enabled, this is applied to either the rate or the tempo.
-    int stereoPairCount = m_channelCount / mixxx::audio::ChannelCount::stereo();
+    int outputBufferSize = iBufferSize,
+        stereoPairCount = m_channelCount / mixxx::audio::ChannelCount::stereo();
+    // The speed is calculated out of the buffer size for the stereo channel
+    // output, after mixing multi channel (stem) together
+    if (stereoPairCount > 1) {
+        outputBufferSize = iBufferSize / stereoPairCount;
+    }
     double speed = m_pRateControl->calculateSpeed(
             baserate,
             tempoRatio,
             paused,
-            // The speed is calculate out of the buffer size for the stereo channel output channel
-            iBufferSize / stereoPairCount,
+            outputBufferSize,
             &is_scratching,
             &is_reverse);
 

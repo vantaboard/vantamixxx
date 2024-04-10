@@ -5,6 +5,7 @@
 #include "engine/channels/enginechannel.h"
 #include "preferences/usersettings.h"
 #include "soundio/soundmanagerutil.h"
+#include "track/track_decl.h"
 #include "util/samplebuffer.h"
 
 class EnginePregain;
@@ -70,6 +71,7 @@ class EngineDeck : public EngineChannel, public AudioDestination {
   public slots:
     void slotPassthroughToggle(double v);
     void slotPassthroughChangeRequest(double v);
+    void slotTrackLoaded(TrackPointer pNewTrack, TrackPointer);
 
   private:
     UserSettingsPointer m_pConfig;
@@ -77,6 +79,8 @@ class EngineDeck : public EngineChannel, public AudioDestination {
     EnginePregain* m_pPregain;
 
     mixxx::SampleBuffer m_stemBuffer;
+    std::unique_ptr<ControlObject> m_pStemCount;
+    std::vector<std::unique_ptr<ControlObject>> m_stemGain;
 
     // Begin vinyl passthrough fields
     QScopedPointer<ControlObject> m_pInputConfigured;

@@ -280,7 +280,8 @@ void CachingReaderWorker::verifyFirstSound(const CachingReaderChunk* pChunk,
                 mixxx::IndexRange::forward(end - 1, kNumSoundFrameToVerify));
         // TODO support multi channel
         if (AnalyzerSilence::verifyFirstSound(sampleBuffer.span(),
-                    mixxx::audio::FramePos(1))) {
+                    mixxx::audio::FramePos(1),
+                    channelCount)) {
             qDebug() << "First sound found at the previously stored position";
         } else {
             // This can happen in case of track edits or replacements, changed

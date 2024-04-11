@@ -24,7 +24,7 @@ constexpr SINT kSeekOffsetFramesV20101 = 429;
 // TODO() Compensate that. This is probably cause by the delayed adoption of pitch changes due
 // to the SoundTouch chunk size.
 
-constexpr SINT kBackBufferSize = 1024;
+constexpr SINT kBackBufferSize = 512 * mixxx::audio::ChannelCount::stem();
 
 }  // namespace
 
@@ -33,13 +33,12 @@ EngineBufferScaleST::EngineBufferScaleST(ReadAheadManager* pReadAheadManager)
           m_pSoundTouch(std::make_unique<soundtouch::SoundTouch>()),
           m_bufferBack(kBackBufferSize),
           m_bBackwards(false) {
-    m_pSoundTouch->setChannels(getOutputSignal().getChannelCount());
     m_pSoundTouch->setRate(m_dBaseRate);
     m_pSoundTouch->setPitch(1.0);
     m_pSoundTouch->setSetting(SETTING_USE_QUICKSEEK, 1);
     // Initialize the internal buffers to prevent re-allocations
     // in the real-time thread.
-    onSampleRateChanged();
+    onOutputSignalChanged();
 }
 
 EngineBufferScaleST::~EngineBufferScaleST() {
@@ -91,12 +90,13 @@ void EngineBufferScaleST::setScaleParameters(double base_rate,
     // changed direction. I removed it because this is handled by EngineBuffer.
 }
 
-void EngineBufferScaleST::onSampleRateChanged() {
+void EngineBufferScaleST::onOutputSignalChanged() {
     m_bufferBack.clear();
     if (!getOutputSignal().isValid()) {
         return;
     }
     m_pSoundTouch->setSampleRate(getOutputSignal().getSampleRate());
+    m_pSoundTouch->setChannels(getOutputSignal().getChannelCount());
 
     // Setting the tempo to a very low value will force SoundTouch
     // to preallocate buffers large enough to (almost certainly)
@@ -149,7 +149,8 @@ double EngineBufferScaleST::scaleBuffer(
                     // are going forward or backward.
                     (m_bBackwards ? -1.0 : 1.0) * m_effectiveRate,
                     m_bufferBack.data(),
-                    m_bufferBack.size());
+                    m_bufferBack.size(),
+                    getOutputSignal().getChannelCount());
             SINT iAvailFrames = getOutputSignal().samples2frames(iAvailSamples);
 
             if (iAvailFrames > 0) {

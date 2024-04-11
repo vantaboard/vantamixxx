@@ -7,7 +7,12 @@
 #include "engine/enginepregain.h"
 #include "engine/enginevumeter.h"
 #include "moc_enginedeck.cpp"
+#include "track/track.h"
 #include "util/sample.h"
+
+namespace {
+constexpr int kMaxSupportedStem = 4;
+}
 
 EngineDeck::EngineDeck(
         const ChannelHandleAndGroup& handleGroup,
@@ -20,6 +25,7 @@ EngineDeck::EngineDeck(
                   /*isTalkoverChannel*/ false,
                   primaryDeck),
           m_pConfig(pConfig),
+          m_pStemCount(std::make_unique<ControlObject>(ConfigKey(getGroup(), "stem_count"))),
           m_pInputConfigured(new ControlObject(ConfigKey(getGroup(), "input_configured"))),
           m_pPassing(new ControlPushButton(ConfigKey(getGroup(), "passthrough"))) {
     m_pInputConfigured->setReadOnly();
@@ -36,12 +42,64 @@ EngineDeck::EngineDeck(
 
     m_pPregain = new EnginePregain(getGroup());
     m_pBuffer = new EngineBuffer(getGroup(), pConfig, this, pMixingEngine);
+    connect(m_pBuffer, &EngineBuffer::trackLoaded, this, &EngineDeck::slotTrackLoaded);
+
+    m_stemGain.reserve(kMaxSupportedStem);
+    for (int i = 0; i < kMaxSupportedStem; i++) {
+        m_stemGain.emplace_back(std::make_unique<ControlObject>(
+                ConfigKey(getGroup(), QString("stem_%1_volume").arg(i)),
+                true,
+                false,
+                false,
+                1.0));
+    }
+}
+
+void EngineDeck::slotTrackLoaded(TrackPointer pNewTrack,
+        TrackPointer) {
+    int stemCount = pNewTrack->getStemInfo().size();
+    m_pStemCount->set(stemCount);
 }
 
 EngineDeck::~EngineDeck() {
     delete m_pPassing;
     delete m_pBuffer;
     delete m_pPregain;
+}
+
+void EngineDeck::processStem(CSAMPLE* pOut, const int iBufferSize) {
+    int stereoChannelCount = m_pBuffer->getChannelCount() / mixxx::kEngineChannelCount;
+    auto allChannelBufferSize = iBufferSize * stereoChannelCount;
+    if (m_stemBuffer.size() < allChannelBufferSize) {
+        m_stemBuffer = mixxx::SampleBuffer(allChannelBufferSize);
+    }
+    m_pBuffer->process(m_stemBuffer.data(), allChannelBufferSize);
+
+    // TODO(XXX): process effects per stems
+
+    for (int i = 0; i < iBufferSize / 2; i++) {
+        for (int c = 0; c < stereoChannelCount; c++) {
+            // TODO(XXX): apply stem gain or skip muted stem
+            if (!c) {
+                pOut[2 * i] = m_stemBuffer.data()[2 * stereoChannelCount * i] *
+                        m_stemGain[c]->get();
+                pOut[2 * i + 1] =
+                        m_stemBuffer.data()[2 * stereoChannelCount * i + 1] *
+                        m_stemGain[c]->get();
+            } else {
+                pOut[2 * i] +=
+                        m_stemBuffer
+                                .data()[2 * stereoChannelCount * i + 2 * c] *
+                        m_stemGain[c]->get();
+                pOut[2 * i + 1] +=
+                        m_stemBuffer
+                                .data()[2 * stereoChannelCount * i +
+                                        2 * c + 1] *
+                        m_stemGain[c]->get();
+            }
+        }
+    }
+    // TODO(XXX): process stem DSP
 }
 
 void EngineDeck::process(CSAMPLE* pOut, const int iBufferSize) {
@@ -61,7 +119,13 @@ void EngineDeck::process(CSAMPLE* pOut, const int iBufferSize) {
         }
 
         // Process the raw audio
-        m_pBuffer->process(pOut, iBufferSize);
+        if (m_pBuffer->getChannelCount() == mixxx::kEngineChannelCount) {
+            // Process a single stereo channel
+            m_pBuffer->process(pOut, iBufferSize);
+        } else {
+            // Process multiple stereo channels (stems) and mix them together
+            processStem(pOut, iBufferSize);
+        }
         m_pPregain->setSpeedAndScratching(m_pBuffer->getSpeed(), m_pBuffer->getScratching());
         m_bPassthroughWasActive = false;
     }

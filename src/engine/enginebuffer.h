@@ -110,6 +110,9 @@ class EngineBuffer : public EngineObject {
     QString getGroup() const;
     // Return the current rate (not thread-safe)
     double getSpeed() const;
+    mixxx::audio::ChannelCount getChannelCount() const {
+        return m_channelCount;
+    }
     bool getScratching() const;
     bool isReverse() const;
     /// Returns current bpm value (not thread-safe)
@@ -239,6 +242,7 @@ class EngineBuffer : public EngineObject {
     void slotTrackLoaded(
             TrackPointer pTrack,
             mixxx::audio::SampleRate trackSampleRate,
+            mixxx::audio::ChannelCount trackChannelCount,
             double trackNumSamples);
     void slotTrackLoadFailed(TrackPointer pTrack,
             const QString& reason);
@@ -332,7 +336,7 @@ class EngineBuffer : public EngineObject {
     // List of hints to provide to the CachingReader
     HintVector m_hintList;
 
-    // The current sample to play in the file.
+    // The current frame to play in the file.
     mixxx::audio::FramePos m_playPos;
 
     // The previous callback's speed. Used to check if the scaler parameters
@@ -382,6 +386,7 @@ class EngineBuffer : public EngineObject {
 
     ControlObject* m_pTrackSamples;
     ControlObject* m_pTrackSampleRate;
+    ControlObject* m_pTrackChannelCount;
 
     ControlPushButton* m_playButton;
     ControlPushButton* m_playStartButton;
@@ -456,6 +461,10 @@ class EngineBuffer : public EngineObject {
     // Records the sample rate so we can detect when it changes. Initialized to
     // 0 to guarantee we see a change on the first callback.
     mixxx::audio::SampleRate m_sampleRate;
+
+    // Records the channel count so it can be reused without having to cast it
+    // from the double value in CO
+    mixxx::audio::ChannelCount m_channelCount;
 
     TrackPointer m_pCurrentTrack;
 #ifdef __SCALER_DEBUG__

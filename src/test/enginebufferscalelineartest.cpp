@@ -74,7 +74,8 @@ class EngineBufferScaleLinearTest : public MixxxTest {
     void SetRate(double rate) {
         double tempoRatio = rate;
         double pitchRatio = rate;
-        m_pScaler->setSampleRate(mixxx::audio::SampleRate(44100));
+        m_pScaler->setOutputSignal(mixxx::audio::SampleRate(44100),
+                mixxx::audio::ChannelCount::stereo());
         m_pScaler->setScaleParameters(
                 1.0, &tempoRatio, &pitchRatio);
     }

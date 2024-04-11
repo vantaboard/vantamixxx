@@ -114,7 +114,10 @@ class CachingReaderWorker : public EngineWorker {
   signals:
     // Emitted once a new track is loaded and ready to be read from.
     void trackLoading();
-    void trackLoaded(TrackPointer pTrack, mixxx::audio::SampleRate sampleRate, double numSamples);
+    void trackLoaded(TrackPointer pTrack,
+            mixxx::audio::SampleRate sampleRate,
+            mixxx::audio::ChannelCount channelCount,
+            double numSamples);
     void trackLoadFailed(TrackPointer pTrack, const QString& reason);
 
   private:
@@ -148,7 +151,8 @@ class CachingReaderWorker : public EngineWorker {
     ReaderStatusUpdate processReadRequest(
             const CachingReaderChunkReadRequest& request);
 
-    void verifyFirstSound(const CachingReaderChunk* pChunk);
+    void verifyFirstSound(const CachingReaderChunk* pChunk,
+            mixxx::audio::ChannelCount channelCount);
 
     // The current audio source of the track loaded
     mixxx::AudioSourcePointer m_pAudioSource;

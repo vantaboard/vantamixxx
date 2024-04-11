@@ -36,6 +36,9 @@
 #ifdef __MEDIAFOUNDATION__
 #include "sources/soundsourcemediafoundation.h"
 #endif
+#ifdef __STEM__
+#include "sources/soundsourcestem.h"
+#endif
 
 #include "library/coverartutils.h"
 #include "track/globaltrackcache.h"
@@ -223,6 +226,11 @@ bool SoundSourceProxy::registerProviders() {
     registerSoundSourceProvider(
             &s_soundSourceProviders,
             std::make_shared<mixxx::SoundSourceProviderSndFile>());
+#endif
+#ifdef __STEM__
+    registerSoundSourceProvider(
+            &s_soundSourceProviders,
+            std::make_shared<mixxx::SoundSourceProviderSTEM>());
 #endif
     // Register the high-priority reference providers AFTER all other
     // providers to verify that their priorities are correct.

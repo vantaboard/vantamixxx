@@ -9,6 +9,7 @@
 #include "mixer/basetrackplayer.h"
 #include "qml/qmlbeatsmodel.h"
 #include "qml/qmlcuesmodel.h"
+#include "qml/qmlstemsmodel.h"
 #include "track/cueinfo.h"
 #include "track/track.h"
 
@@ -47,6 +48,9 @@ class QmlPlayerProxy : public QObject {
 
     Q_PROPERTY(mixxx::qml::QmlBeatsModel* beatsModel MEMBER m_pBeatsModel CONSTANT);
     Q_PROPERTY(mixxx::qml::QmlCuesModel* hotcuesModel MEMBER m_pHotcuesModel CONSTANT);
+#ifdef __STEM__
+    Q_PROPERTY(mixxx::qml::QmlStemsModel* stemsModel READ getStemsModel CONSTANT);
+#endif
 
   public:
     explicit QmlPlayerProxy(BaseTrackPlayer* pTrackPlayer, QObject* parent = nullptr);
@@ -82,6 +86,10 @@ class QmlPlayerProxy : public QObject {
     Q_INVOKABLE void loadTrackFromLocation(const QString& trackLocation, bool play = false);
     Q_INVOKABLE void loadTrackFromLocationUrl(const QUrl& trackLocationUrl, bool play = false);
 
+    QmlStemsModel* getStemsModel() const {
+        return m_pStemsModel.get();
+    }
+
   public slots:
     void slotTrackLoaded(TrackPointer pTrack);
     void slotLoadingTrack(TrackPointer pNewTrack, TrackPointer pOldTrack);
@@ -89,6 +97,9 @@ class QmlPlayerProxy : public QObject {
     void slotWaveformChanged();
     void slotBeatsChanged();
     void slotHotcuesChanged();
+#ifdef __STEM__
+    void slotStemsChanged();
+#endif
 
     void setArtist(const QString& artist);
     void setTitle(const QString& title);
@@ -126,6 +137,9 @@ class QmlPlayerProxy : public QObject {
     void coverArtUrlChanged();
     void trackLocationUrlChanged();
     void cuesChanged();
+#ifdef __STEM__
+    void stemsChanged();
+#endif
 
     void loadTrackFromLocationRequested(const QString& trackLocation, bool play);
 
@@ -140,6 +154,9 @@ class QmlPlayerProxy : public QObject {
     TrackPointer m_pCurrentTrack;
     QmlBeatsModel* m_pBeatsModel;
     QmlCuesModel* m_pHotcuesModel;
+#ifdef __STEM__
+    std::unique_ptr<QmlStemsModel> m_pStemsModel;
+#endif
 };
 
 } // namespace qml

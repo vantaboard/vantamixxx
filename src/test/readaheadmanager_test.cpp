@@ -22,10 +22,14 @@ class StubReader : public CachingReader {
             : CachingReader(kGroup, UserSettingsPointer()) {
     }
 
-    CachingReader::ReadResult read(SINT startSample, SINT numSamples, bool reverse,
-             CSAMPLE* buffer) override {
+    CachingReader::ReadResult read(SINT startSample,
+            SINT numSamples,
+            bool reverse,
+            CSAMPLE* buffer,
+            mixxx::audio::ChannelCount channelCount) override {
         Q_UNUSED(startSample);
         Q_UNUSED(reverse);
+        Q_UNUSED(channelCount);
         SampleUtil::clear(buffer, numSamples);
         return CachingReader::ReadResult::AVAILABLE;
     }
@@ -120,17 +124,47 @@ TEST_F(ReadAheadManagerTest, FractionalFrameLoop) {
     m_pLoopControl->pushTargetReturnValue(3.3);
     m_pLoopControl->pushTargetReturnValue(kNoTrigger);
     // read from start to loop trigger, overshoot 0.3
-    EXPECT_EQ(20, m_pReadAheadManager->getNextSamples(1.0, m_pBuffer, 100));
+    EXPECT_EQ(20,
+            m_pReadAheadManager->getNextSamples(
+                    1.0, m_pBuffer, 100, mixxx::audio::ChannelCount::stereo()));
     // read loop
-    EXPECT_EQ(18, m_pReadAheadManager->getNextSamples(1.0, m_pBuffer, 80));
+    EXPECT_EQ(18,
+            m_pReadAheadManager->getNextSamples(
+                    1.0, m_pBuffer, 80, mixxx::audio::ChannelCount::stereo()));
     // read loop
-    EXPECT_EQ(16, m_pReadAheadManager->getNextSamples(1.0, m_pBuffer, 62));
+    EXPECT_EQ(16,
+            m_pReadAheadManager->getNextSamples(
+                    1.0, m_pBuffer, 62, mixxx::audio::ChannelCount::stereo()));
     // read loop
-    EXPECT_EQ(18, m_pReadAheadManager->getNextSamples(1.0, m_pBuffer, 46));
+    EXPECT_EQ(18,
+            m_pReadAheadManager->getNextSamples(
+                    1.0, m_pBuffer, 46, mixxx::audio::ChannelCount::stereo()));
     // read loop
-    EXPECT_EQ(16, m_pReadAheadManager->getNextSamples(1.0, m_pBuffer, 28));
+    EXPECT_EQ(16,
+            m_pReadAheadManager->getNextSamples(
+                    1.0, m_pBuffer, 28, mixxx::audio::ChannelCount::stereo()));
     // read loop
-    EXPECT_EQ(12, m_pReadAheadManager->getNextSamples(1.0, m_pBuffer, 12));
+    EXPECT_EQ(12,
+            m_pReadAheadManager->getNextSamples(
+                    1.0, m_pBuffer, 12, mixxx::audio::ChannelCount::stereo()));
+
+    // EXPECT_EQ(20, m_pReadAheadManager->getNextSamples(1.0, m_pBuffer, 100,
+    // mixxx::audio::ChannelCount::stereo()));
+    // // read loop
+    // EXPECT_EQ(18, m_pReadAheadManager->getNextSamples(1.0, m_pBuffer, 80,
+    // mixxx::audio::ChannelCount::stereo()));
+    // // read loop
+    // EXPECT_EQ(16, m_pReadAheadManager->getNextSamples(1.0, m_pBuffer, 62,
+    // mixxx::audio::ChannelCount::stereo()));
+    // // read loop
+    // EXPECT_EQ(18, m_pReadAheadManager->getNextSamples(1.0, m_pBuffer, 46,
+    // mixxx::audio::ChannelCount::stereo()));
+    // // read loop
+    // EXPECT_EQ(16, m_pReadAheadManager->getNextSamples(1.0, m_pBuffer, 28,
+    // mixxx::audio::ChannelCount::stereo()));
+    // // read loop
+    // EXPECT_EQ(12, m_pReadAheadManager->getNextSamples(1.0, m_pBuffer, 12,
+    // mixxx::audio::ChannelCount::stereo()));
 
     // start 0.5 to 20.2 = 19.7
     // loop 3.3 to 20.2 = 16.9
